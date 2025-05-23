@@ -9,7 +9,7 @@ on:
       timedelta:
         description: 'Time window in hours to fetch reviews'
         required: false
-        default: '24'
+        default: '72'
       quantity:
         description: 'Max number of reviews to fetch'
         required: false
@@ -25,7 +25,7 @@ jobs:
       ISSUER_ID: ${{ secrets.ISSUER_ID }}
       APPLE_APP_ID: ${{ secrets.APPLE_APP_ID }}
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-      TIMEDELTA_HOURS: ${{ github.event.inputs.timedelta || '24' }}
+      TIMEDELTA_HOURS: ${{ github.event.inputs.timedelta || '72' }}
       REVIEWS_FETCH_QUANTITY: ${{ github.event.inputs.quantity || '50' }}
 
     steps:
