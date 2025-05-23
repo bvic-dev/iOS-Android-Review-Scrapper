@@ -1,0 +1,52 @@
+name: Fetch iOS Reviews
+
+on:
+  schedule:
+    # Every 24 hours
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      timedelta:
+        description: 'Time window in hours to fetch reviews'
+        required: false
+        default: '24'
+      quantity:
+        description: 'Max number of reviews to fetch'
+        required: false
+        default: '50'
+
+jobs:
+  fetch-ios-reviews:
+    runs-on: ubuntu-latest
+
+    env:
+      # Secrets, configure in GitHub repo settings
+      KEY_ID: ${{ secrets.KEY_ID }}
+      ISSUER_ID: ${{ secrets.ISSUER_ID }}
+      APPLE_APP_ID: ${{ secrets.APPLE_APP_ID }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      TIMEDELTA_HOURS: ${{ github.event.inputs.timedelta || '24' }}
+      REVIEWS_FETCH_QUANTITY: ${{ github.event.inputs.quantity || '50' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Save Apple .p8 key to file
+        run: |
+          echo "${{ secrets.PRIVATE_KEY }}" > AuthKey.p8
+
+      - name: Run iOS Review Fetcher (Scheduled or Manual)
+        run: |
+          python main.py --ios --send-discord --timedelta ${{ env.TIMEDELTA_HOURS }} --quantity ${{ env.REVIEWS_FETCH_QUANTITY }}
+        env:
+          PRIVATE_KEY_FILE: AuthKey.p8

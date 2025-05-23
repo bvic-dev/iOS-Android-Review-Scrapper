@@ -1,21 +1,35 @@
-# config.py
-
 import os
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
 
 class Config:
     def __init__(self):
-        # KEY_ID, ISSUER_ID, PRIVATE_KEY are for ios
-        # JSON_KEY_DATA is for google
+        # ---- iOS App Store Connect ----
         self.KEY_ID = os.getenv('KEY_ID', 'DEFAULT_KEY_ID')
         self.ISSUER_ID = os.getenv('ISSUER_ID', 'DEFAULT_ISSUER_ID')
-        self.PRIVATE_KEY = os.getenv('PRIVATE_KEY', 'DEFAULT_PRIVATE_KEY')
-        self.JSON_KEY_DATA = os.getenv('JSON_KEY_DATA', 'JSON_KEY_DATA')
+        self.PRIVATE_KEY_FILE = os.getenv('PRIVATE_KEY_FILE', 'PRIVATE_KEY_FILE')
+        self.APPLE_APP_ID = os.getenv('APPLE_APP_ID', 'APPLE_APP_ID')
+        try:
+            # Load the iOS private key from file
+            with open(self.PRIVATE_KEY_FILE, 'r') as f:
+                self.PRIVATE_KEY = f.read()
+        except FileNotFoundError:
+            print(f"⚠️ Could not find PRIVATE_KEY_FILE: {self.PRIVATE_KEY_FILE}")
+            self.PRIVATE_KEY = ""
+
+        # ---- Android Google Play ----
+        self.JSON_KEY_FILE = os.getenv('JSON_KEY_FILE', 'JSON_KEY_FILE')
         self.REPO_PACKAGE_NAME = os.getenv('REPO_PACKAGE_NAME', 'DEFAULT_APP_PACKAGE_ID')
-        self.OUTPUT_FILE = os.getenv('OUTPUT_FILE', 'reviews.json')
-        self.TIMEDELTA_HOURS = int(os.getenv('TIMEDELTA_HOURS', 72))
+        
+        # ---- General settings ----
+        self.OUTPUT_FILE = None
+        self.TIMEDELTA_HOURS = 72
         self.REVIEWS_FETCH_QUANTITY = 50
         self.DATETIME_FORMAT = "%d/%m/%y %H:%M:%S"
-
+        
+        # ---- Discord ----
+        self.DISCORD_WEBHOOK_URL = os.getenv('DISCORD_WEBHOOK_URL', 'DEFAULT_DISCORD_WEBHOOK_URL')
 
 config = Config()

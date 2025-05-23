@@ -1,0 +1,52 @@
+name: Fetch Android Reviews
+
+on:
+  schedule:
+    # Every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      timedelta:
+        description: 'Time window in hours to fetch reviews'
+        required: false
+        default: '6'
+      quantity:
+        description: 'Max number of reviews to fetch'
+        required: false
+        default: '50'
+
+jobs:
+  fetch-android-reviews:
+    runs-on: ubuntu-latest
+
+    env:
+      # Mandatory secrets, configure these in GitHub > Settings > Secrets
+      JSON_KEY: ${{ secrets.JSON_KEY }}
+      REPO_PACKAGE_NAME: ${{ secrets.REPO_PACKAGE_NAME }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      # Defaults for main script
+      TIMEDELTA_HOURS: ${{ github.event.inputs.timedelta || '6' }}
+      REVIEWS_FETCH_QUANTITY: ${{ github.event.inputs.quantity || '50' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Save Google service account to file
+        run: |
+          echo "${JSON_KEY}" > service-account.json
+
+      - name: Run Android Review Fetcher (Scheduled or Manual)
+        run: |
+          python main.py --android --send-discord --timedelta ${{ env.TIMEDELTA_HOURS }} --quantity ${{ env.REVIEWS_FETCH_QUANTITY }}
+        env:
+          JSON_KEY_FILE: service-account.json

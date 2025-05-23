@@ -2,7 +2,6 @@
 
 import googleapiclient.discovery
 from google.oauth2 import service_account
-import json
 import re
 from misc.review import Review
 from misc.config import config
@@ -32,8 +31,11 @@ def get_reviews() -> List[Review]:
 
 def download_review(start_index: int) -> dict:
     try:
-        json_credentials = json.loads(config.JSON_KEY_DATA)
-        credentials = service_account.Credentials.from_service_account_info(json_credentials)
+        credentials = service_account.Credentials.from_service_account_file(
+            config.JSON_KEY_FILE,
+            scopes=["https://www.googleapis.com/auth/androidpublisher"]
+        )
+        print("credentials", credentials)
         service = googleapiclient.discovery.build('androidpublisher', 'v3', credentials=credentials)
         return service.reviews().list(packageName=config.REPO_PACKAGE_NAME,
                                       maxResults=config.REVIEWS_FETCH_QUANTITY).execute()
@@ -43,12 +45,14 @@ def download_review(start_index: int) -> dict:
 
 
 def create_review(reviews: List[Review], review_raw: dict):
+    print("review_raw", review_raw)
     comment = review_raw["comments"][0]["userComment"]
     truncated_comment = comment["text"][:99] + "..." if len(comment["text"]) > 100 else comment["text"]
-    version = "-"
-    version_code = "-"
-    phone = "-"
-    author_name = "Monsieur Untel"
+    version = None
+    version_code = None
+    phone = None
+    author_name = None
+    reviewerLanguage =None
     if "appVersionName" in comment:
         version = comment["appVersionName"]
     if "deviceMetadata" in comment:
@@ -57,6 +61,8 @@ def create_review(reviews: List[Review], review_raw: dict):
         version_code = comment["appVersionCode"]
     if "authorName" in review_raw:
         author_name = review_raw["authorName"]
+    if "reviewerLanguage" in comment:
+        reviewerLanguage = comment["reviewerLanguage"]
     review = Review(
         os="Android",
         author_name=author_name,
@@ -67,7 +73,8 @@ def create_review(reviews: List[Review], review_raw: dict):
         version=version,
         build_version=version_code,
         phone=phone,
-        title=""
+        title="",
+        reviewerLanguage=reviewerLanguage
     )
     if not check_datetime_treshold(review):
         reviews.append(review)

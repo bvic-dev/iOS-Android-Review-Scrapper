@@ -13,7 +13,7 @@ def get_reviews() -> List[Review]:
     token = create_token()
     finished = False
     reviews = []
-    url = f'https://api.appstoreconnect.apple.com/v1/apps/{config.REPO_PACKAGE_NAME}/customerReviews?limit={config.REVIEWS_FETCH_QUANTITY}&sort=-createdDate'
+    url = f'https://api.appstoreconnect.apple.com/v1/apps/{config.APPLE_APP_ID}/customerReviews?limit={config.REVIEWS_FETCH_QUANTITY}&sort=-createdDate'
     while not finished:
         print("Calling Apple services...")
         headers = {
@@ -22,6 +22,7 @@ def get_reviews() -> List[Review]:
         response = requests.get(url, headers=headers)
         if response.status_code != 200:
             print(f"Error retrieving reviews {response.status_code}")
+            finished = True
         else:
             response_reviews = response.json()
             print(response_reviews)
@@ -39,16 +40,17 @@ def create_review(reviews: List[Review], review_raw: dict):
     comment = review_raw["body"]
     truncated_comment = comment[:99] + "..." if len(comment) > 100 else comment
     review = Review(
-        os="iOs",
+        os="iOS",
         author_name=review_raw["reviewerNickname"],
         rating=review_raw["rating"],
         truncated_comment=re.sub(r'[\n\t]', '', truncated_comment),
         content=re.sub(r'[\n\t]', '', comment),
         datetime=create_datetime_from_iso8601(review_raw["createdDate"]),
-        version="",
-        build_version="",
-        phone="",
-        title=review_raw["title"]
+        version=None,
+        build_version=None,
+        phone=None,
+        title=review_raw["title"],
+        reviewerLanguage=review_raw["territory"]
     )
     if not check_datetime_treshold(review):
         reviews.append(review)

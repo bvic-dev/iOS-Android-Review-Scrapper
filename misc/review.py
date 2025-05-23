@@ -5,7 +5,7 @@ from datetime import datetime
 
 
 class Review:
-    def __init__(self, os, author_name, title, rating, content, datetime, version, build_version, phone, truncated_comment):
+    def __init__(self, os, author_name, title, rating, content, datetime, version, build_version, phone, truncated_comment, reviewerLanguage):
         self.os = os
         self.author_name = author_name
         self.rating = rating
@@ -16,6 +16,7 @@ class Review:
         self.version = version
         self.build_version = build_version
         self.phone = phone
+        self.reviewerLanguage = reviewerLanguage
 
     def to_json(self):
         serializable_object = self
