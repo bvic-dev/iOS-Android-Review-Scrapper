@@ -2,14 +2,14 @@ name: Fetch Android Reviews
 
 on:
   schedule:
-    # Every 6 hours
-    - cron: '0 */6 * * *'
+    # Every 24 hours at 2 AM UTC
+    - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
       timedelta:
         description: 'Time window in hours to fetch reviews'
         required: false
-        default: '6'
+        default: '24'
       quantity:
         description: 'Max number of reviews to fetch'
         required: false
@@ -25,7 +25,7 @@ jobs:
       REPO_PACKAGE_NAME: ${{ secrets.REPO_PACKAGE_NAME }}
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
       # Defaults for main script
-      TIMEDELTA_HOURS: ${{ github.event.inputs.timedelta || '6' }}
+      TIMEDELTA_HOURS: ${{ github.event.inputs.timedelta || '24' }}
       REVIEWS_FETCH_QUANTITY: ${{ github.event.inputs.quantity || '50' }}
 
     steps:

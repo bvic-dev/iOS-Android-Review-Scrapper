@@ -2,7 +2,7 @@ name: Fetch iOS Reviews
 
 on:
   schedule:
-    # Every 24 hours
+    # Every 24 hours at 2 AM UTC
     - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
