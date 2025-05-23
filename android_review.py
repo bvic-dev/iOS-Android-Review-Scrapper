@@ -45,7 +45,6 @@ def download_review(start_index: int) -> dict:
 
 
 def create_review(reviews: List[Review], review_raw: dict):
-    print("review_raw", review_raw)
     comment = review_raw["comments"][0]["userComment"]
     truncated_comment = comment["text"][:99] + "..." if len(comment["text"]) > 100 else comment["text"]
     version = None

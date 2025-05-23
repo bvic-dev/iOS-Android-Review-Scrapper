@@ -25,7 +25,6 @@ def get_reviews() -> List[Review]:
             finished = True
         else:
             response_reviews = response.json()
-            print(response_reviews)
             for item in response_reviews['data']:
                 create_review(reviews=reviews, review_raw=item["attributes"])
             finished = (len(reviews) < config.REVIEWS_FETCH_QUANTITY)
