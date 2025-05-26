@@ -2,7 +2,6 @@ name: Fetch iOS Reviews
 
 on:
   schedule:
-    # Every 24 hours at 2 AM UTC
     - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
@@ -18,26 +17,22 @@ on:
 jobs:
   fetch-ios-reviews:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     env:
-      # Secrets, configure in GitHub repo settings
       KEY_ID: ${{ secrets.KEY_ID }}
       ISSUER_ID: ${{ secrets.ISSUER_ID }}
       APPLE_APP_ID: ${{ secrets.APPLE_APP_ID }}
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-      TIMEDELTA_HOURS: ${{ github.event.inputs.timedelta || '72' }}
-      REVIEWS_FETCH_QUANTITY: ${{ github.event.inputs.quantity || '50' }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Cache pip dependencies
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -50,11 +45,97 @@ jobs:
           pip install -r requirements.txt
 
       - name: Save Apple .p8 key to file
-        run: |
-          echo "${{ secrets.PRIVATE_KEY }}" > AuthKey.p8
+        run: echo "${{ secrets.PRIVATE_KEY }}" > AuthKey.p8
 
-      - name: Run iOS Review Fetcher (Scheduled or Manual)
+      - name: Determine trigger type
+        id: context
         run: |
-          python main.py --ios --send-discord --timedelta ${{ env.TIMEDELTA_HOURS }} --quantity ${{ env.REVIEWS_FETCH_QUANTITY }}
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "trigger=manual" >> $GITHUB_OUTPUT
+            echo "user=${{ github.actor }}" >> $GITHUB_OUTPUT
+            echo "timedelta=${{ github.event.inputs.timedelta }}" >> $GITHUB_OUTPUT
+            echo "quantity=${{ github.event.inputs.quantity }}" >> $GITHUB_OUTPUT
+          else
+            echo "trigger=scheduled" >> $GITHUB_OUTPUT
+            echo "user=github-scheduler" >> $GITHUB_OUTPUT
+            echo "timedelta=72" >> $GITHUB_OUTPUT
+            echo "quantity=50" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run iOS Review Fetcher
+        id: fetcher
         env:
           PRIVATE_KEY_FILE: AuthKey.p8
+        run: |
+          python main.py --ios --send-discord --timedelta ${{ steps.context.outputs.timedelta }} --quantity ${{ steps.context.outputs.quantity }} > review.log 2>&1
+          tail -n 20 review.log > tail.log
+          echo "tail<<EOF" >> $GITHUB_OUTPUT
+          cat tail.log >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Notify Discord - Success
+        if: success()
+        run: |
+          USER="${{ steps.context.outputs.user }}"
+          TRIGGER="${{ steps.context.outputs.trigger }}"
+          TAIL="${{ steps.fetcher.outputs.tail }}"
+
+          JSON=$(jq -n \
+            --arg desc "👤 Déclenché par : **$USER**
+            📝 Dernières lignes du log :
+            \`\`\`
+            $TAIL
+            \`\`\`" \
+            --arg name "✅ Avis iOS récupérés avec succès" \
+            --arg icon "https://cdn-icons-png.flaticon.com/512/14090/14090371.png" \
+            '{
+              embeds: [
+                {
+                  description: $desc,
+                  color: 3381606,
+                  author: {
+                    name: $name,
+                    icon_url: $icon
+                  }
+                }
+              ]
+            }'
+          )
+
+          curl -s -X POST -H "Content-Type: application/json" \
+            -d "$JSON" \
+            ${{ secrets.DISCORD_WEBHOOK_URL_LOGGER }}
+
+      - name: Notify Discord - Failure
+        if: failure()
+        run: |
+          USER="${{ steps.context.outputs.user }}"
+          SHA="${{ github.sha }}"
+          TAIL=${{ steps.fetcher.outputs.tail }}"
+
+          JSON=$(jq -n \
+            --arg desc "👤 Déclenché par : **$USER**
+            ❌ Commit : $SHA
+            📝 Dernières lignes du log :
+            \`\`\`
+            $TAIL
+            \`\`\`" \
+            --arg name "🚨 Erreur lors de la récupération des avis iOS" \
+            --arg icon "https://cdn-icons-png.flaticon.com/512/753/753345.png" \
+            '{
+              embeds: [
+                {
+                  description: $desc,
+                  color: 15605837,
+                  author: {
+                    name: $name,
+                    icon_url: $icon
+                  }
+                }
+              ]
+            }'
+          )
+
+          curl -s -X POST -H "Content-Type: application/json" \
+            -d "$JSON" \
+            ${{ secrets.DISCORD_WEBHOOK_URL_LOGGER }}

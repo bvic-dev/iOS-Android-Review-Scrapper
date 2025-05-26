@@ -12,11 +12,9 @@ class Config:
         self.PRIVATE_KEY_FILE = os.getenv('PRIVATE_KEY_FILE', 'PRIVATE_KEY_FILE')
         self.APPLE_APP_ID = os.getenv('APPLE_APP_ID', 'APPLE_APP_ID')
         try:
-            # Load the iOS private key from file
             with open(self.PRIVATE_KEY_FILE, 'r') as f:
                 self.PRIVATE_KEY = f.read()
         except FileNotFoundError:
-            print(f"⚠️ Could not find PRIVATE_KEY_FILE: {self.PRIVATE_KEY_FILE}")
             self.PRIVATE_KEY = ""
 
         # ---- Android Google Play ----
